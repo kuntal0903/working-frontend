@@ -205,119 +205,235 @@ export default function DomainScanPage({ onOpenModal }) {
     );
   }, [scanResult, searchFilter]);
 
+  const handleExportReport = (format) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(scanResult, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `domain-scan-${scanResult.domain}.${format}`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    addToast(`Exported domain scan report (${format.toUpperCase()})`, 'success');
+  };
+
   return (
     <div className="page-content domain-scan-container">
       <div className="page-header">
         <div className="page-header__left">
-          <h1 className="page-header__title">Domain <span>Scan</span></h1>
-          <p className="page-header__subtitle">Perform real-time attack surface discovery, subdomain enumeration, and DNS/SSL audits.</p>
+          <h1 className="page-header__title">
+            Domain <span>Scan</span>
+          </h1>
+          <p className="page-header__subtitle">
+            Perform real-time attack surface discovery, subdomain enumeration, and DNS/SSL vulnerability audits.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn--outline" onClick={() => handleExportReport('json')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Download size={14} /> Export JSON
+          </button>
         </div>
       </div>
 
-      <div className="domain-scan-hero">
+      <div className="domain-scan-hero" style={{ background: 'var(--bg-card)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
         <div className="domain-hero__header">
-          <div className="domain-hero__title">
-            <Globe size={22} color="var(--neon-blue)" /> Target Domain Surface Reconnaissance
+          <div className="domain-hero__title" style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--neon-blue)' }}>
+            <Globe size={22} /> Target Domain Surface Reconnaissance
           </div>
-          <p className="domain-hero__subtitle">Enter a domain name to execute an automated multi-threaded security scan.</p>
+          <p className="domain-hero__subtitle" style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+            Enter a domain name to execute an automated multi-threaded security scan across all public endpoints.
+          </p>
         </div>
 
-        <div className="domain-input-group">
-          <div className="domain-input-wrapper">
-            <Globe size={18} />
+        <div className="domain-input-group" style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+          <div className="domain-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', flex: 1, minWidth: 260 }}>
+            <Globe size={18} color="var(--text-muted)" />
             <input
               type="text"
               className="domain-input"
               value={targetDomain}
               onChange={(e) => setTargetDomain(e.target.value)}
-              placeholder="e.g. acme-corp.com"
+              placeholder="e.g. acme-corp.com or mycompany.io"
               disabled={isScanning}
+              onKeyDown={(e) => e.key === 'Enter' && handleStartScan()}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', width: '100%', fontSize: 14 }}
             />
           </div>
 
-          <button className="scan-launch-btn" onClick={handleStartScan} disabled={isScanning}>
+          <select
+            className="domain-select"
+            value={scanType}
+            onChange={(e) => setScanType(e.target.value)}
+            disabled={isScanning}
+            style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '8px 14px', fontSize: 13 }}
+          >
+            <option value="full">Full Attack Surface Recon</option>
+            <option value="subdomains">Subdomain Enumeration Only</option>
+            <option value="dns">DNS & Email Security Audit</option>
+            <option value="ssl">SSL/TLS & Certificate Analysis</option>
+          </select>
+
+          <button
+            className="btn btn--primary"
+            onClick={handleStartScan}
+            disabled={isScanning || !targetDomain.trim()}
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          >
             {isScanning ? <RefreshCw size={16} className="spin-slow" /> : <Zap size={16} />} Launch Scan
           </button>
         </div>
 
-        <div className="quick-targets" style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
+        <div className="quick-targets" style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>
           <span>Preset Targets:</span>
           {Object.keys(MOCK_SCAN_DATASETS).map((d) => (
-            <button key={d} className="target-chip" onClick={() => handleSelectQuickTarget(d)}>
+            <button
+              key={d}
+              className="target-chip"
+              onClick={() => handleSelectQuickTarget(d)}
+              disabled={isScanning}
+              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--neon-blue)', padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+            >
               {d}
             </button>
           ))}
         </div>
       </div>
 
+      {isScanning && (
+        <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 12, border: '1px solid var(--border-hover)', marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14, fontWeight: 600 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity size={18} color="var(--neon-blue)" className="spin-slow" /> Scanning Target: <strong className="mono-cell" style={{ color: 'var(--neon-blue)' }}>{targetDomain}</strong>
+            </span>
+            <span style={{ color: 'var(--neon-blue)' }}>{progress}%</span>
+          </div>
+          <div style={{ height: 6, background: 'var(--bg-base)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${progress}%`, background: 'var(--grad-primary)', transition: 'width 0.3s ease' }} />
+          </div>
+          <div style={{ background: 'var(--bg-base)', padding: 12, borderRadius: 8, marginTop: 12, fontFamily: 'monospace', fontSize: 12, maxHeight: 120, overflowY: 'auto' }}>
+            {consoleLogs.map((log, idx) => (
+              <div key={idx} style={{ color: log.type === 'success' ? '#4ade80' : log.type === 'warning' ? 'var(--high)' : 'var(--text-secondary)', marginBottom: 4 }}>
+                [{log.time}] {log.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {scanResult && (
         <div className="domain-tabs-wrapper" style={{ marginTop: 24 }}>
           <div className="domain-tab-list" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 16 }}>
-            <button className={`domain-tab-btn ${activeTab === 'subdomains' ? 'active' : ''}`} onClick={() => setActiveTab('subdomains')}>
-              Subdomains ({scanResult.subdomains.length})
+            <button
+              className={`btn ${activeTab === 'subdomains' ? 'btn--primary' : 'btn--ghost'}`}
+              onClick={() => setActiveTab('subdomains')}
+              style={{ fontSize: 13 }}
+            >
+              <Server size={14} style={{ marginRight: 6 }} /> Discovered Subdomains ({scanResult.subdomains.length})
             </button>
-            <button className={`domain-tab-btn ${activeTab === 'dns' ? 'active' : ''}`} onClick={() => setActiveTab('dns')}>
-              DNS Records ({scanResult.dns.length})
+            <button
+              className={`btn ${activeTab === 'dns' ? 'btn--primary' : 'btn--ghost'}`}
+              onClick={() => setActiveTab('dns')}
+              style={{ fontSize: 13 }}
+            >
+              <Globe size={14} style={{ marginRight: 6 }} /> DNS Security ({scanResult.dns.length})
             </button>
-            <button className={`domain-tab-btn ${activeTab === 'ssl' ? 'active' : ''}`} onClick={() => setActiveTab('ssl')}>
-              SSL/TLS Audit
+            <button
+              className={`btn ${activeTab === 'ssl' ? 'btn--primary' : 'btn--ghost'}`}
+              onClick={() => setActiveTab('ssl')}
+              style={{ fontSize: 13 }}
+            >
+              <Lock size={14} style={{ marginRight: 6 }} /> SSL/TLS Audit
             </button>
           </div>
 
           {activeTab === 'subdomains' && (
-            <table className="domain-data-table">
-              <thead>
-                <tr>
-                  <th>Subdomain FQDN</th>
-                  <th>IP Address</th>
-                  <th>Ports</th>
-                  <th>Status</th>
-                  <th>Tech Stack</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSubdomains.map((sub, idx) => (
-                  <tr key={idx}>
-                    <td className="mono-cell" style={{ fontWeight: 600, color: 'var(--neon-blue)' }}>{sub.name}</td>
-                    <td className="mono-cell">{sub.ip}</td>
-                    <td>{sub.ports.map(p => <span key={p} className="port-tag">:{p} </span>)}</td>
-                    <td style={{ color: sub.status.includes('200') ? '#4ade80' : 'var(--high)', fontWeight: 600 }}>{sub.status}</td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{sub.tech}</td>
+            <div className="dash-card">
+              <table className="domain-data-table">
+                <thead>
+                  <tr>
+                    <th>Subdomain FQDN</th>
+                    <th>IP Address</th>
+                    <th>Open Ports</th>
+                    <th>HTTP Status</th>
+                    <th>Tech Stack</th>
+                    <th>Risk</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredSubdomains.map((sub, idx) => (
+                    <tr key={idx}>
+                      <td className="mono-cell" style={{ fontWeight: 600, color: 'var(--neon-blue)' }}>{sub.name}</td>
+                      <td className="mono-cell">{sub.ip}</td>
+                      <td>
+                        {sub.ports.map((p) => (
+                          <span key={p} className="port-tag">:{p} </span>
+                        ))}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: sub.status.includes('200') ? '#4ade80' : 'var(--high)' }}>
+                          {sub.status}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{sub.tech}</td>
+                      <td><span className={`status-badge ${sub.risk.toLowerCase()}`}>{sub.risk}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {activeTab === 'dns' && (
-            <table className="domain-data-table">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Name</th>
-                  <th>Value</th>
-                  <th>TTL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scanResult.dns.map((rec, idx) => (
-                  <tr key={idx}>
-                    <td><span className="port-tag" style={{ fontWeight: 700 }}>{rec.type}</span></td>
-                    <td className="mono-cell">{rec.name}</td>
-                    <td className="mono-cell" style={{ fontSize: 12 }}>{rec.value}</td>
-                    <td className="mono-cell">{rec.ttl}s</td>
+            <div className="dash-card">
+              <table className="domain-data-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Value / Record Data</th>
+                    <th>TTL</th>
+                    <th>Security Audit</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {scanResult.dns.map((rec, idx) => (
+                    <tr key={idx}>
+                      <td><span className="port-tag" style={{ fontWeight: 700 }}>{rec.type}</span></td>
+                      <td className="mono-cell">{rec.name}</td>
+                      <td className="mono-cell" style={{ fontSize: 12 }}>{rec.value}</td>
+                      <td className="mono-cell">{rec.ttl}s</td>
+                      <td><span className="status-badge safe">{rec.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {activeTab === 'ssl' && (
-            <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
-              <h4 style={{ marginBottom: 10 }}>Certificate Details</h4>
-              <p>Issuer: <strong>{scanResult.ssl.issuer}</strong></p>
-              <p>Protocol: <span className="mono-cell" style={{ color: 'var(--neon-blue)' }}>{scanResult.ssl.protocol}</span></p>
-              <p>Valid For: <span style={{ color: '#4ade80', fontWeight: 700 }}>{scanResult.ssl.daysLeft} Days</span></p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div className="dash-card">
+                <h4 style={{ marginBottom: 12, fontSize: 15, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Lock size={16} color="var(--neon-blue)" /> Certificate Authority Details
+                </h4>
+                <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10, color: 'var(--text-secondary)' }}>
+                  <div>Issuer: <strong style={{ color: 'var(--text-primary)' }}>{scanResult.ssl.issuer}</strong></div>
+                  <div>Valid From: <span className="mono-cell">{scanResult.ssl.validFrom}</span></div>
+                  <div>Valid To: <span className="mono-cell">{scanResult.ssl.validTo}</span></div>
+                  <div>Days Remaining: <span className="mono-cell" style={{ color: '#4ade80', fontWeight: 700 }}>{scanResult.ssl.daysLeft} Days</span></div>
+                </div>
+              </div>
+
+              <div className="dash-card">
+                <h4 style={{ marginBottom: 12, fontSize: 15, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldCheck size={16} color="#4ade80" /> Cryptographic Handshake
+                </h4>
+                <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10, color: 'var(--text-secondary)' }}>
+                  <div>Protocol Version: <span className="mono-cell" style={{ color: 'var(--neon-blue)' }}>{scanResult.ssl.protocol}</span></div>
+                  <div>Cipher Suite: <span className="mono-cell" style={{ fontSize: 11 }}>{scanResult.ssl.cipher}</span></div>
+                  <div>HSTS Enabled: <strong style={{ color: scanResult.ssl.hsts ? '#4ade80' : 'var(--critical)' }}>{scanResult.ssl.hsts ? 'YES (Strict-Transport-Security)' : 'NO'}</strong></div>
+                  <div>OCSP Stapling: <strong style={{ color: scanResult.ssl.ocspStapling ? '#4ade80' : 'var(--high)' }}>{scanResult.ssl.ocspStapling ? 'Enabled' : 'Disabled'}</strong></div>
+                </div>
+              </div>
             </div>
           )}
         </div>
