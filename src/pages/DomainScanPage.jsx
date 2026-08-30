@@ -48,6 +48,42 @@ const MOCK_SCAN_DATASETS = {
       { port: 1194, protocol: 'UDP', service: 'OpenVPN', state: 'Open', risk: 'Medium' },
       { port: 5432, protocol: 'TCP', service: 'PostgreSQL', state: 'Exposed', risk: 'Critical' },
     ]
+  },
+  'cyber-vault.io': {
+    domain: 'cyber-vault.io',
+    grade: 'B+',
+    score: 79,
+    ip: '172.67.133.21',
+    registrar: 'Namecheap Inc.',
+    created: '2021-08-19',
+    expires: '2028-08-19',
+    subdomains: [
+      { name: 'cyber-vault.io', ip: '172.67.133.21', ports: [80, 443], status: '200 OK', tech: 'Next.js, Vercel', risk: 'Safe' },
+      { name: 'auth.cyber-vault.io', ip: '172.67.133.22', ports: [443], status: '200 OK', tech: 'Auth0, OAuth2', risk: 'Safe' },
+      { name: 'metrics.cyber-vault.io', ip: '172.67.133.90', ports: [9090], status: '200 OK', tech: 'Prometheus Grafana', risk: 'High' },
+      { name: 'jenkins.cyber-vault.io', ip: '198.51.100.88', ports: [8080], status: '401 Unauthorized', tech: 'Jenkins 2.319', risk: 'Medium' },
+    ],
+    dns: [
+      { type: 'A', name: '@', value: '172.67.133.21', ttl: 300, status: 'Valid' },
+      { type: 'TXT', name: '@', value: 'v=spf1 mx ~all', ttl: 3600, status: 'Warning (Weak SPF)' },
+      { type: 'TXT', name: '_dmarc', value: 'v=DMARC1; p=none;', ttl: 3600, status: 'Warning (Policy: none)' },
+    ],
+    ssl: {
+      issuer: "Let's Encrypt Authority X3",
+      validFrom: "2026-06-01",
+      validTo: "2026-09-01",
+      daysLeft: 22,
+      protocol: "TLS v1.3",
+      cipher: "ECDHE-RSA-AES128-GCM-SHA256",
+      hsts: true,
+      ocspStapling: false,
+    },
+    ports: [
+      { port: 80, protocol: 'TCP', service: 'HTTP', state: 'Open', risk: 'Safe' },
+      { port: 443, protocol: 'TCP', service: 'HTTPS', state: 'Open', risk: 'Safe' },
+      { port: 9090, protocol: 'TCP', service: 'Prometheus', state: 'Open', risk: 'High' },
+      { port: 8080, protocol: 'TCP', service: 'Jenkins HTTP', state: 'Open', risk: 'Medium' },
+    ]
   }
 };
 
@@ -79,28 +115,213 @@ export default function DomainScanPage({ onOpenModal }) {
     let currentProgress = 5;
     const interval = setInterval(() => {
       currentProgress += Math.floor(Math.random() * 15) + 10;
+
+      if (currentProgress >= 25 && currentProgress < 50) {
+        setConsoleLogs((prev) => [
+          ...prev,
+          { time: new Date().toLocaleTimeString(), text: `[DNS] Querying A, AAAA, MX, TXT, DMARC records...`, type: 'info' },
+          { time: new Date().toLocaleTimeString(), text: `[SUBDOMAINS] Enumerating passive certificates & CT logs...`, type: 'info' }
+        ]);
+      } else if (currentProgress >= 50 && currentProgress < 75) {
+        setConsoleLogs((prev) => [
+          ...prev,
+          { time: new Date().toLocaleTimeString(), text: `[SSL] Verifying TLS 1.3 Handshake & HSTS policy...`, type: 'success' },
+          { time: new Date().toLocaleTimeString(), text: `[PORTS] Scanning top 100 exposed service ports...`, type: 'warning' }
+        ]);
+      } else if (currentProgress >= 75 && currentProgress < 100) {
+        setConsoleLogs((prev) => [
+          ...prev,
+          { time: new Date().toLocaleTimeString(), text: `[RISK ENGINE] Correlating CVE threat intelligence database...`, type: 'info' }
+        ]);
+      }
+
       if (currentProgress >= 100) {
         clearInterval(interval);
         setProgress(100);
         setIsScanning(false);
         addToast(`Domain scan completed for ${cleanedDomain}`, 'success');
+        setConsoleLogs((prev) => [
+          ...prev,
+          { time: new Date().toLocaleTimeString(), text: `Scan completed successfully for ${cleanedDomain}.`, type: 'success' }
+        ]);
+
+        if (MOCK_SCAN_DATASETS[cleanedDomain]) {
+          setScanResult(MOCK_SCAN_DATASETS[cleanedDomain]);
+        } else {
+          setScanResult({
+            domain: cleanedDomain,
+            grade: 'B',
+            score: 76,
+            ip: '198.51.100.77',
+            registrar: 'Global Registrar LLC',
+            created: '2020-01-15',
+            expires: '2026-11-20',
+            subdomains: [
+              { name: `${cleanedDomain}`, ip: '198.51.100.77', ports: [80, 443], status: '200 OK', tech: 'Nginx, PHP', risk: 'Safe' },
+              { name: `api.${cleanedDomain}`, ip: '198.51.100.78', ports: [443], status: '200 OK', tech: 'Node.js', risk: 'Safe' },
+              { name: `test.${cleanedDomain}`, ip: '198.51.100.99', ports: [8080], status: '200 OK', tech: 'Tomcat', risk: 'High' },
+            ],
+            dns: [
+              { type: 'A', name: '@', value: '198.51.100.77', ttl: 300, status: 'Valid' },
+              { type: 'TXT', name: '@', value: 'v=spf1 mx ~all', ttl: 3600, status: 'Warning' },
+            ],
+            ssl: {
+              issuer: "Let's Encrypt Authority X3",
+              validFrom: "2026-05-01",
+              validTo: "2026-08-01",
+              daysLeft: 12,
+              protocol: "TLS v1.3",
+              cipher: "ECDHE-RSA-AES256-GCM-SHA384",
+              hsts: true,
+              ocspStapling: true,
+            },
+            ports: [
+              { port: 80, protocol: 'TCP', service: 'HTTP', state: 'Open', risk: 'Safe' },
+              { port: 443, protocol: 'TCP', service: 'HTTPS', state: 'Open', risk: 'Safe' },
+              { port: 8080, protocol: 'TCP', service: 'HTTP-ALT', state: 'Open', risk: 'High' },
+            ]
+          });
+        }
       } else {
         setProgress(currentProgress);
       }
     }, 400);
   }, [targetDomain, scanType, addToast]);
 
+  const handleSelectQuickTarget = (domain) => {
+    setTargetDomain(domain);
+    if (MOCK_SCAN_DATASETS[domain]) {
+      setScanResult(MOCK_SCAN_DATASETS[domain]);
+      addToast(`Loaded scan analysis for ${domain}`, 'info');
+    }
+  };
+
+  const filteredSubdomains = useMemo(() => {
+    if (!scanResult?.subdomains) return [];
+    if (!searchFilter.trim()) return scanResult.subdomains;
+    const q = searchFilter.toLowerCase();
+    return scanResult.subdomains.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.ip.includes(q) || s.tech.toLowerCase().includes(q)
+    );
+  }, [scanResult, searchFilter]);
+
   return (
     <div className="page-content domain-scan-container">
       <div className="page-header">
         <div className="page-header__left">
           <h1 className="page-header__title">Domain <span>Scan</span></h1>
-          <p className="page-header__subtitle">Perform real-time attack surface discovery and DNS/SSL audits.</p>
+          <p className="page-header__subtitle">Perform real-time attack surface discovery, subdomain enumeration, and DNS/SSL audits.</p>
         </div>
       </div>
+
       <div className="domain-scan-hero">
-        <h3>Target Domain Reconnaissance</h3>
+        <div className="domain-hero__header">
+          <div className="domain-hero__title">
+            <Globe size={22} color="var(--neon-blue)" /> Target Domain Surface Reconnaissance
+          </div>
+          <p className="domain-hero__subtitle">Enter a domain name to execute an automated multi-threaded security scan.</p>
+        </div>
+
+        <div className="domain-input-group">
+          <div className="domain-input-wrapper">
+            <Globe size={18} />
+            <input
+              type="text"
+              className="domain-input"
+              value={targetDomain}
+              onChange={(e) => setTargetDomain(e.target.value)}
+              placeholder="e.g. acme-corp.com"
+              disabled={isScanning}
+            />
+          </div>
+
+          <button className="scan-launch-btn" onClick={handleStartScan} disabled={isScanning}>
+            {isScanning ? <RefreshCw size={16} className="spin-slow" /> : <Zap size={16} />} Launch Scan
+          </button>
+        </div>
+
+        <div className="quick-targets" style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
+          <span>Preset Targets:</span>
+          {Object.keys(MOCK_SCAN_DATASETS).map((d) => (
+            <button key={d} className="target-chip" onClick={() => handleSelectQuickTarget(d)}>
+              {d}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {scanResult && (
+        <div className="domain-tabs-wrapper" style={{ marginTop: 24 }}>
+          <div className="domain-tab-list" style={{ display: 'flex', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 16 }}>
+            <button className={`domain-tab-btn ${activeTab === 'subdomains' ? 'active' : ''}`} onClick={() => setActiveTab('subdomains')}>
+              Subdomains ({scanResult.subdomains.length})
+            </button>
+            <button className={`domain-tab-btn ${activeTab === 'dns' ? 'active' : ''}`} onClick={() => setActiveTab('dns')}>
+              DNS Records ({scanResult.dns.length})
+            </button>
+            <button className={`domain-tab-btn ${activeTab === 'ssl' ? 'active' : ''}`} onClick={() => setActiveTab('ssl')}>
+              SSL/TLS Audit
+            </button>
+          </div>
+
+          {activeTab === 'subdomains' && (
+            <table className="domain-data-table">
+              <thead>
+                <tr>
+                  <th>Subdomain FQDN</th>
+                  <th>IP Address</th>
+                  <th>Ports</th>
+                  <th>Status</th>
+                  <th>Tech Stack</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSubdomains.map((sub, idx) => (
+                  <tr key={idx}>
+                    <td className="mono-cell" style={{ fontWeight: 600, color: 'var(--neon-blue)' }}>{sub.name}</td>
+                    <td className="mono-cell">{sub.ip}</td>
+                    <td>{sub.ports.map(p => <span key={p} className="port-tag">:{p} </span>)}</td>
+                    <td style={{ color: sub.status.includes('200') ? '#4ade80' : 'var(--high)', fontWeight: 600 }}>{sub.status}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{sub.tech}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'dns' && (
+            <table className="domain-data-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Name</th>
+                  <th>Value</th>
+                  <th>TTL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scanResult.dns.map((rec, idx) => (
+                  <tr key={idx}>
+                    <td><span className="port-tag" style={{ fontWeight: 700 }}>{rec.type}</span></td>
+                    <td className="mono-cell">{rec.name}</td>
+                    <td className="mono-cell" style={{ fontSize: 12 }}>{rec.value}</td>
+                    <td className="mono-cell">{rec.ttl}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'ssl' && (
+            <div style={{ background: 'var(--bg-card)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
+              <h4 style={{ marginBottom: 10 }}>Certificate Details</h4>
+              <p>Issuer: <strong>{scanResult.ssl.issuer}</strong></p>
+              <p>Protocol: <span className="mono-cell" style={{ color: 'var(--neon-blue)' }}>{scanResult.ssl.protocol}</span></p>
+              <p>Valid For: <span style={{ color: '#4ade80', fontWeight: 700 }}>{scanResult.ssl.daysLeft} Days</span></p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
