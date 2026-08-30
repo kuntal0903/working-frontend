@@ -35,24 +35,20 @@ const INITIAL_KEYS = [
 ];
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
   const { addToast } = useToast();
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [displayName, setDisplayName] = useState('Alex Dawson');
+  const [email, setEmail] = useState('alex.dawson@corp.internal');
+  const [keys, setKeys] = useState(INITIAL_KEYS);
 
-  const handleSaveSettings = () => {
-    addToast('System preferences updated successfully', 'success');
-  };
+  const showToast = (msg) => addToast(msg, 'success');
 
   return (
     <div className="page-content settings-container">
       <div className="page-header">
         <div className="page-header__left">
-          <h1 className="page-header__title">
-            System <span>Settings</span>
-          </h1>
-          <p className="page-header__subtitle">
-            Configure workspace security controls, API access keys, integrations, and user permissions.
-          </p>
+          <h1 className="page-header__title">System <span>Settings</span></h1>
+          <p className="page-header__subtitle">Configure workspace security controls, API access keys, integrations, and user permissions.</p>
         </div>
       </div>
 
@@ -66,11 +62,11 @@ export default function SettingsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {sec.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeSection === item.id;
+                  const isActive = activeTab === item.id;
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setActiveSection(item.id)}
+                      onClick={() => setActiveTab(item.id)}
                       className="clickable-row"
                       style={{
                         display: 'flex',
@@ -79,8 +75,8 @@ export default function SettingsPage() {
                         padding: '8px 12px',
                         borderRadius: 'var(--radius-md)',
                         border: 'none',
-                        background: isActive ? 'var(--accent-glow)' : 'transparent',
-                        color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        background: isActive ? 'var(--neon-blue)' : 'transparent',
+                        color: isActive ? '#030712' : 'var(--text-secondary)',
                         fontSize: 13,
                         fontWeight: 600,
                         width: '100%',
@@ -97,16 +93,50 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className="settings-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, textTransform: 'capitalize' }}>{activeSection} Configuration</h3>
-            <button className="btn btn--primary" onClick={handleSaveSettings}>Save Configuration</button>
-          </div>
+        <div className="settings-card" style={{ padding: 24 }}>
+          {activeTab === 'profile' && (
+            <div>
+              <h3>Profile Settings</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>Personal display details</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 400 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Display Name</label>
+                  <input className="domain-input" value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Email Address</label>
+                  <input className="domain-input" type="email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <button className="btn btn--primary" style={{ marginTop: 12, width: 'fit-content' }} onClick={() => showToast('Profile changes saved')}>Save Changes</button>
+              </div>
+            </div>
+          )}
 
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            <p>System configuration panel for <strong>{activeSection}</strong> is active.</p>
-            <p style={{ marginTop: 8 }}>All changes take effect immediately across all connected API endpoints and team members.</p>
-          </div>
+          {activeTab === 'api-keys' && (
+            <div>
+              <h3>API Keys</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>Programmatic access keys</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {keys.map(k => (
+                  <div key={k.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-base)' }}>
+                    <div>
+                      <strong style={{ fontSize: 13 }}>{k.name}</strong>
+                      <div className="mono-cell" style={{ fontSize: 12, color: 'var(--neon-blue)', marginTop: 2 }}>{k.value}</div>
+                    </div>
+                    <button className="btn btn--outline" style={{ fontSize: 11 }} onClick={() => showToast(`Copied ${k.name}`)}>Copy Key</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab !== 'profile' && activeTab !== 'api-keys' && (
+            <div>
+              <h3>{activeTab.toUpperCase()} Configuration</h3>
+              <p style={{ color: 'var(--text-secondary)', marginTop: 8, fontSize: 13 }}>Workspace configuration for {activeTab} is active.</p>
+              <button className="btn btn--primary" style={{ marginTop: 16 }} onClick={() => showToast(`Saved ${activeTab} preferences`)}>Save Configuration</button>
+            </div>
+          )}
         </div>
       </div>
     </div>
